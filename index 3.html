@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stake Mines Analysis</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#06101a;color:#fff;font-family:'Inter',-apple-system,sans-serif;display:flex;justify-content:center;min-height:100vh;min-height:100dvh;overflow-x:hidden;}
+
+/* BG */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.18;animation:flt 8s ease-in-out infinite;}
+.o1{width:300px;height:300px;background:#00e676;top:-80px;left:-60px;}
+.o2{width:250px;height:250px;background:#448aff;bottom:-60px;right:-40px;animation-delay:-3s;}
+.o3{width:180px;height:180px;background:#9b59ff;top:40%;left:55%;animation-delay:-5s;}
+@keyframes flt{0%,100%{transform:translateY(0)}50%{transform:translateY(-28px)}}
+
+.app{width:100%;max-width:420px;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;position:relative;z-index:1;}
+.scr{display:none;flex-direction:column;flex:1;padding:16px;padding-bottom:92px;gap:14px;overflow-y:auto;}
+.scr.on{display:flex;}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.06);}
+.logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#00e676,#00b248);display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(0,230,118,.4);flex-shrink:0;}
+.htitle{font-weight:900;font-size:17px;background:linear-gradient(90deg,#fff,#b2dfdb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hsub{font-size:10px;font-weight:700;color:#00e676;letter-spacing:1.5px;margin-top:1px;}
+.hbadge{margin-left:auto;padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;font-size:11px;color:#5c7a9a;font-weight:700;white-space:nowrap;}
+
+/* MODE SWITCHER */
+.casino-lbl{font-size:10px;font-weight:800;letter-spacing:1.5px;padding-left:4px;margin-bottom:5px;}
+.lbl-stake{color:#00e676;}
+.lbl-1win{color:#9b59ff;}
+.mode-bar{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:4px;display:flex;gap:4px;}
+.mbtn{flex:1;padding:10px 8px;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;background:transparent;color:#3a5570;transition:all .2s;}
+.mbtn.sel-green{background:linear-gradient(135deg,rgba(0,230,118,.15),rgba(0,178,72,.1));color:#00e676;box-shadow:0 0 16px rgba(0,230,118,.1);}
+.mbtn.sel-blue{background:linear-gradient(135deg,rgba(68,138,255,.15),rgba(30,107,224,.1));color:#448aff;box-shadow:0 0 16px rgba(68,138,255,.1);}
+.mbtn.sel-purple{background:linear-gradient(135deg,rgba(155,89,255,.2),rgba(109,40,217,.12));color:#c084fc;box-shadow:0 0 16px rgba(155,89,255,.15);}
+.sep{display:flex;align-items:center;gap:10px;}
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.06);}
+.sep span{font-size:9px;font-weight:800;letter-spacing:1px;color:#2a4055;}
+
+/* GRID */
+.gwrap{position:relative;background:rgba(8,20,34,.8);border-radius:20px;border:1px solid rgba(255,255,255,.07);padding:12px;backdrop-filter:blur(20px);}
+.gtip{text-align:center;font-size:11px;font-weight:700;color:#00e676;letter-spacing:.5px;margin-bottom:10px;display:none;animation:fdin .4s ease;}
+.gtip.on{display:block;}
+@keyframes fdin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;}
+.tile{aspect-ratio:1;border-radius:11px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d2035,#091828);border:1px solid rgba(255,255,255,.06);transition:all .2s;position:relative;overflow:hidden;}
+.tile::before{content:'';position:absolute;inset:0;background:linear-gradient(145deg,rgba(255,255,255,.03),transparent);}
+.tile.safe{background:linear-gradient(145deg,#0d2e1a,#091e12);border-color:rgba(0,230,118,.35);animation:tglow 2.5s ease-in-out infinite;}
+@keyframes tglow{0%,100%{box-shadow:0 0 10px rgba(0,230,118,.15)}50%{box-shadow:0 0 22px rgba(0,230,118,.3)}}
+
+/* GRID OVERLAY */
+.gov{position:absolute;inset:0;border-radius:20px;background:rgba(6,16,26,.85);backdrop-filter:blur(8px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+.gov.on{display:flex;}
+.ring{width:44px;height:44px;border-radius:50%;border:2px solid rgba(0,230,118,.2);border-top-color:#00e676;animation:spin .7s linear infinite;box-shadow:0 0 16px rgba(0,230,118,.3);}
+.ring.p{border-color:rgba(155,89,255,.2);border-top-color:#c084fc;box-shadow:0 0 16px rgba(155,89,255,.3);}
+.rtxt{font-size:11px;font-weight:800;letter-spacing:2px;color:#00e676;}
+.rtxt.p{color:#c084fc;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SELECTOR */
+.sel-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:16px;}
+.sel-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sel-lbl{color:#5c7a9a;font-size:11px;font-weight:700;letter-spacing:1px;}
+.counter{display:flex;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:12px;overflow:hidden;}
+.cbtn{width:38px;height:38px;border:none;background:transparent;color:#5c7a9a;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.cbtn:active{background:rgba(0,230,118,.1);color:#00e676;}
+.cnum{min-width:44px;text-align:center;font-size:20px;font-weight:900;color:#00e676;}
+.sl-row{display:flex;align-items:center;gap:10px;}
+.sl-edge{color:#2a3f55;font-size:11px;font-weight:700;min-width:16px;text-align:center;}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:5px;outline:none;cursor:pointer;background:#1a2f42;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#00e676,#00b248);box-shadow:0 0 12px rgba(0,230,118,.5);cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#00e676,#00b248);border:none;cursor:pointer;}
+
+/* BUTTONS */
+.btn{width:100%;padding:16px;border:none;border-radius:16px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:.5px;transition:all .2s;position:relative;overflow:hidden;}
+.btn::after{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:shine 3s infinite;}
+@keyframes shine{0%{left:-100%}60%,100%{left:150%}}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.5;cursor:default;}
+.btn-blue{background:linear-gradient(135deg,#448aff,#1e6be0,#1565c0);box-shadow:0 4px 24px rgba(68,138,255,.35),inset 0 1px 0 rgba(255,255,255,.15);}
+.btn-purple{background:linear-gradient(135deg,#9b59ff,#7c3aed,#6d28d9);box-shadow:0 4px 24px rgba(155,89,255,.4),inset 0 1px 0 rgba(255,255,255,.15);}
+
+/* OU BUTTONS */
+.ou-wrap{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:16px;}
+.ou-lbl{color:#5c7a9a;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px;}
+.ou-row{display:flex;gap:8px;}
+.oubtn{flex:1;padding:13px;border-radius:13px;cursor:pointer;font-size:14px;font-weight:800;transition:all .2s;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#3a5570;}
+.oubtn.sel-over{background:linear-gradient(135deg,rgba(0,230,118,.12),rgba(0,178,72,.08));color:#00e676;border-color:rgba(0,230,118,.25);}
+.oubtn.sel-under{background:linear-gradient(135deg,rgba(68,138,255,.12),rgba(30,107,224,.08));color:#448aff;border-color:rgba(68,138,255,.25);}
+
+/* LOADING BOX */
+.lbox{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:32px;display:none;flex-direction:column;align-items:center;gap:12px;}
+.lbox.on{display:flex;}
+
+/* RESULT CARDS */
+.rcard{background:rgba(8,20,34,.9);border-radius:20px;border:1px solid rgba(255,255,255,.08);padding:24px 20px;display:none;flex-direction:column;align-items:center;gap:18px;text-align:center;backdrop-filter:blur(20px);position:relative;overflow:hidden;}
+.rcard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--ac,#00e676),transparent);}
+.rcard.on{display:flex;animation:popin .4s cubic-bezier(.34,1.2,.64,1);}
+@keyframes popin{from{transform:scale(.88) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+
+/* BADGE */
+.badge{font-size:10px;font-weight:800;letter-spacing:1.5px;padding:5px 16px;border-radius:20px;}
+.badge.g{background:rgba(0,230,118,.12);color:#00e676;border:1px solid rgba(0,230,118,.25);}
+.badge.b{background:rgba(68,138,255,.12);color:#448aff;border:1px solid rgba(68,138,255,.25);}
+.badge.p{background:rgba(155,89,255,.15);color:#c084fc;border:1px solid rgba(155,89,255,.3);}
+.badge.y{background:rgba(255,215,64,.12);color:#ffd740;border:1px solid rgba(255,215,64,.25);}
+
+/* BIG NUMBER */
+.bnum{font-size:64px;font-weight:900;line-height:1;letter-spacing:-2px;}
+.bnum.g{color:#00e676;text-shadow:0 0 30px rgba(0,230,118,.4);}
+.bnum.b{color:#448aff;text-shadow:0 0 30px rgba(68,138,255,.4);}
+.bnum.p{color:#c084fc;text-shadow:0 0 30px rgba(192,132,252,.5);}
+.bnum.y{color:#ffd740;text-shadow:0 0 30px rgba(255,215,64,.5);}
+.bsub{color:#2a4055;font-size:11px;font-weight:700;letter-spacing:.5px;margin-top:4px;}
+
+/* DICE TRACK */
+.dtrack{width:100%;height:10px;background:#0d1f30;border-radius:10px;position:relative;overflow:visible;}
+.dfill{position:absolute;top:0;height:100%;border-radius:10px;transition:width .6s cubic-bezier(.34,1.2,.64,1);}
+.dfill.g{right:0;background:linear-gradient(90deg,#00e676,#00b248);}
+.dfill.b{left:0;background:linear-gradient(90deg,#448aff,#1565c0);}
+.ddot{position:absolute;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #06101a;box-shadow:0 0 10px rgba(255,255,255,.4);transition:left .6s cubic-bezier(.34,1.2,.64,1);}
+.dhint{color:#5c7a9a;font-size:13px;font-weight:600;line-height:1.5;}
+.dhint b{color:#fff;}
+
+/* CRASH BAR */
+.cbar{width:100%;height:12px;background:#0d1f30;border-radius:12px;position:relative;overflow:hidden;}
+.cbar-fill{height:100%;border-radius:12px;transition:width .8s cubic-bezier(.34,1.2,.64,1);background:linear-gradient(90deg,#9b59ff,#c084fc,#ffd740);}
+.cbar-danger{position:absolute;top:0;right:0;height:100%;background:rgba(239,83,80,.3);border-radius:0 12px 12px 0;}
+.cbar-labels{display:flex;justify-content:space-between;margin-top:5px;}
+.cbl-safe{font-size:10px;color:#c084fc;font-weight:700;}
+.cbl-crash{font-size:10px;color:#ef5350;font-weight:700;}
+
+/* STATS ROW */
+.stats{display:flex;width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden;}
+.stat{flex:1;padding:14px 8px;text-align:center;}
+.stat+.stat{border-left:1px solid rgba(255,255,255,.06);}
+.sval{font-size:18px;font-weight:900;}
+.sval.g{color:#00e676;text-shadow:0 0 12px rgba(0,230,118,.3);}
+.sval.b{color:#448aff;text-shadow:0 0 12px rgba(68,138,255,.3);}
+.sval.p{color:#c084fc;text-shadow:0 0 12px rgba(192,132,252,.3);}
+.sval.y{color:#ffd740;text-shadow:0 0 12px rgba(255,215,64,.3);}
+.slbl{color:#2a4055;font-size:10px;font-weight:700;letter-spacing:.3px;margin-top:4px;}
+
+/* SKIP CARD */
+.skip-card{background:rgba(8,20,34,.9);border-radius:20px;border:1px solid rgba(255,215,64,.2);padding:28px 20px;display:none;flex-direction:column;align-items:center;gap:16px;text-align:center;position:relative;overflow:hidden;}
+.skip-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#ffd740,transparent);}
+.skip-card.on{display:flex;animation:popin .4s cubic-bezier(.34,1.2,.64,1);}
+.skip-icon{font-size:56px;animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.skip-title{font-size:26px;font-weight:900;color:#ffd740;text-shadow:0 0 20px rgba(255,215,64,.4);}
+.skip-box{background:rgba(255,215,64,.06);border:1px solid rgba(255,215,64,.2);border-radius:14px;padding:14px 18px;width:100%;}
+.skip-hint{color:#5c7a9a;font-size:13px;font-weight:600;line-height:1.5;}
+.skip-hint b{color:#fff;}
+
+/* 1WIN LABEL */
+.onewin-lbl{background:rgba(155,89,255,.08);border:1px solid rgba(155,89,255,.2);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;}
+.onewin-lbl-title{font-size:12px;font-weight:800;color:#c084fc;}
+.onewin-lbl-sub{font-size:11px;color:#3a5570;margin-top:2px;}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:rgba(6,14,24,.95);border-top:1px solid rgba(255,255,255,.06);display:flex;z-index:100;backdrop-filter:blur(20px);padding-bottom:env(safe-area-inset-bottom);}
+.nitem{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 14px;gap:5px;cursor:pointer;border:none;background:none;color:#2a4055;font-size:10px;font-weight:800;letter-spacing:.5px;transition:color .2s;position:relative;}
+.nitem.on{color:#00e676;}
+.nitem.on::before{content:'';position:absolute;top:0;left:25%;right:25%;height:2px;background:linear-gradient(90deg,transparent,#00e676,transparent);border-radius:0 0 4px 4px;box-shadow:0 0 8px rgba(0,230,118,.6);}
+.nicon{width:22px;height:22px;}
+
+/* PROFILE */
+.prof-hero{background:linear-gradient(135deg,#091828,#0d2035,#091828);border-radius:20px;border:1px solid rgba(255,255,255,.07);padding:24px 20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden;}
+.prof-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(0,230,118,.1),transparent 70%);}
+.pava{width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#00e676,#00b248);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 24px rgba(0,230,118,.35);flex-shrink:0;}
+.pname{font-weight:900;font-size:18px;}
+.psub{color:#5c7a9a;font-size:12px;margin-top:3px;}
+.ptag{margin-left:auto;background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.2);color:#00e676;font-size:10px;font-weight:800;padding:5px 10px;border-radius:20px;flex-shrink:0;}
+
+/* ACCESS CARDS */
+.acard{border-radius:20px;border:1px solid rgba(255,255,255,.08);overflow:hidden;cursor:pointer;transition:transform .2s;display:block;position:relative;}
+.acard:active{transform:scale(.985);}
+.acard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;}
+.acard.stake{background:linear-gradient(135deg,#091828,#0b1f32,#091828);}
+.acard.stake::before{background:linear-gradient(90deg,transparent,#00e676 30%,#448aff 70%,transparent);}
+.acard.onewin{background:linear-gradient(135deg,#110a1f,#180d2e,#110a1f);border-color:rgba(155,89,255,.2);}
+.acard.onewin::before{background:linear-gradient(90deg,transparent,#9b59ff 30%,#c084fc 70%,transparent);}
+.acin{padding:22px 20px;display:flex;flex-direction:column;gap:16px;}
+.atop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.aicon{width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.aicon.g{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.2);}
+.aicon.p{background:rgba(155,89,255,.12);border:1px solid rgba(155,89,255,.25);}
+.abadge{font-size:9px;font-weight:800;letter-spacing:1px;padding:5px 11px;border-radius:20px;}
+.abadge.g{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.2);color:#00e676;}
+.abadge.p{background:rgba(155,89,255,.12);border:1px solid rgba(155,89,255,.25);color:#c084fc;}
+.atitle{font-size:19px;font-weight:900;line-height:1.25;}
+.atitle .g{background:linear-gradient(90deg,#00e676,#69f0ae);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.atitle .p{background:linear-gradient(90deg,#9b59ff,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.adesc{color:#3a5570;font-size:13px;line-height:1.6;}
+.adiv{height:1px;background:linear-gradient(90deg,rgba(255,255,255,.07),transparent);}
+.asteps{display:flex;flex-direction:column;gap:10px;}
+.astep{display:flex;align-items:center;gap:12px;}
+.astepn{width:24px;height:24px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;}
+.astepn.b{background:rgba(68,138,255,.12);border:1px solid rgba(68,138,255,.25);color:#448aff;}
+.astepn.p{background:rgba(155,89,255,.12);border:1px solid rgba(155,89,255,.25);color:#c084fc;}
+.astept{color:#5c7a9a;font-size:13px;font-weight:600;line-height:1.4;}
+.astept strong{color:#ffd740;}
+.promo{background:rgba(255,215,64,.06);border:1px solid rgba(255,215,64,.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.promo-l{font-size:11px;color:#5c7a9a;font-weight:600;}
+.promo-code{font-size:20px;font-weight:900;color:#ffd740;letter-spacing:1px;}
+.promo-tag{font-size:11px;color:#ffd740;font-weight:700;background:rgba(255,215,64,.1);padding:4px 10px;border-radius:8px;border:1px solid rgba(255,215,64,.2);white-space:nowrap;}
+.abtn{width:100%;padding:15px;border:none;border-radius:14px;font-size:14px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+.abtn.g{background:linear-gradient(135deg,#00e676,#00b248);color:#001a0a;box-shadow:0 4px 24px rgba(0,230,118,.3);}
+.abtn.p{background:linear-gradient(135deg,#9b59ff,#7c3aed);color:#fff;box-shadow:0 4px 24px rgba(155,89,255,.35);}
+.anote{text-align:center;color:#2a4055;font-size:11px;}
+
+/* STAT CARDS */
+.strow{display:flex;gap:10px;}
+.stcard{flex:1;padding:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:16px;display:flex;align-items:center;gap:12px;}
+.sticon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.sticon.g{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.15);}
+.sticon.b{background:rgba(68,138,255,.1);border:1px solid rgba(68,138,255,.15);}
+.stbig{font-size:20px;font-weight:900;color:#00e676;}
+.stlbl{color:#2a4055;font-size:11px;font-weight:600;margin-top:2px;}
+.icard{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.iicon{width:38px;height:38px;background:rgba(255,255,255,.05);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ititle{font-weight:700;font-size:13px;}
+.isub{color:#2a4055;font-size:11px;margin-top:2px;}
+.foot{text-align:center;color:#1e3550;font-size:11px;font-weight:600;padding:4px 0 8px;}
+</style>
+</head>
+<body>
+<div class="bg">
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
+</div>
+<div class="app">
+
+<!-- ===== GAME SCREEN ===== -->
+<div class="scr on" id="sG">
+  <div class="hdr">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 40 40">
+        <polygon points="20,4 10,16 20,13 30,16" fill="#ccffd8" opacity=".9"/>
+        <polygon points="10,16 20,36 30,16 20,13" fill="#fff"/>
+        <polygon points="4,16 10,16 20,36" fill="#b2ffd0"/>
+        <polygon points="36,16 30,16 20,36" fill="#ccffe0"/>
+        <polygon points="16,5 12,14 20,13" fill="white" opacity=".5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="htitle">Stake Mines Analysis</div>
+      <div class="hsub">LIVE ANALYZER</div>
+    </div>
+    <div class="hbadge" id="topBadge">5×5 GRID</div>
+  </div>
+
+  <!-- MODE SWITCHER -->
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <div class="casino-lbl lbl-stake">⚡ STAKE CASINO</div>
+    <div class="mode-bar">
+      <button class="mbtn sel-green" id="bM" onclick="sw('m')">💎 Mines</button>
+      <button class="mbtn" id="bD" onclick="sw('d')">🎲 Dice</button>
+    </div>
+    <div class="sep"><span>ДРУГОЕ КАЗИНО</span></div>
+    <div class="casino-lbl lbl-1win">🔥 1WIN CASINO</div>
+    <div class="mode-bar">
+      <button class="mbtn" id="bC" onclick="sw('c')">✈️ Lucky Jet</button>
+    </div>
+  </div>
+
+  <!-- MINES -->
+  <div id="pM">
+    <div class="gwrap">
+      <div class="gtip" id="gTip">✦ Нажимай на отмеченные клетки</div>
+      <div class="grid" id="grid"></div>
+      <div class="gov" id="gOv">
+        <div class="ring"></div>
+        <div class="rtxt">АНАЛИЗ</div>
+      </div>
+    </div>
+    <div style="height:14px"></div>
+    <div class="sel-box">
+      <div class="sel-top">
+        <span class="sel-lbl">КОЛИЧЕСТВО МИН</span>
+        <div class="counter">
+          <button class="cbtn" onclick="adjM(-1)">−</button>
+          <div class="cnum" id="mNum">3</div>
+          <button class="cbtn" onclick="adjM(1)">+</button>
+        </div>
+      </div>
+      <div class="sl-row">
+        <span class="sl-edge">1</span>
+        <input type="range" id="mSl" min="1" max="24" value="3" oninput="onSl(this.value)">
+        <span class="sl-edge">24</span>
+      </div>
+    </div>
+    <div style="height:14px"></div>
+    <button class="btn btn-blue" id="mBtn" onclick="doMines()">Узнать результат</button>
+  </div>
+
+  <!-- DICE -->
+  <div id="pD" style="display:none">
+    <div class="ou-wrap">
+      <div class="ou-lbl">НАПРАВЛЕНИЕ СТАВКИ</div>
+      <div class="ou-row">
+        <button class="oubtn sel-over" id="bOv" onclick="setOU('o')">📈 БОЛЬШЕ</button>
+        <button class="oubtn" id="bUn" onclick="setOU('u')">📉 МЕНЬШЕ</button>
+      </div>
+    </div>
+    <div style="height:14px"></div>
+    <div class="lbox" id="dLoad">
+      <div class="ring"></div>
+      <div class="rtxt">АНАЛИЗ</div>
+    </div>
+    <div class="rcard" id="dRes" style="--ac:#00e676">
+      <div class="badge g" id="dBdg">СТАВЬ БОЛЬШЕ</div>
+      <div>
+        <div class="bnum g" id="dNum">—</div>
+        <div class="bsub">ВВЕДИ ЭТО ЧИСЛО НА STAKE</div>
+      </div>
+      <div class="dtrack">
+        <div class="dfill g" id="dFill" style="width:50%"></div>
+        <div class="ddot" id="dDot" style="left:50%"></div>
+      </div>
+      <div class="dhint" id="dHint">Выбери <b>БОЛЬШЕ</b>, введи число и ставь</div>
+      <div class="stats">
+        <div class="stat"><div class="sval g" id="dMult">—</div><div class="slbl">Множитель</div></div>
+        <div class="stat"><div class="sval b" id="dNumS">—</div><div class="slbl">Число</div></div>
+        <div class="stat"><div class="sval y" id="dChan">—</div><div class="slbl">Шанс победы</div></div>
+      </div>
+    </div>
+    <div style="height:14px"></div>
+    <button class="btn btn-blue" id="dBtn" onclick="doDice()">Узнать результат</button>
+  </div>
+
+  <!-- LUCKY JET -->
+  <div id="pC" style="display:none">
+    <div class="onewin-lbl">
+      <div style="font-size:22px">✈️</div>
+      <div>
+        <div class="onewin-lbl-title">1WIN CASINO — Lucky Jet</div>
+        <div class="onewin-lbl-sub">Анализ точки выхода</div>
+      </div>
+    </div>
+    <div style="height:14px"></div>
+    <div class="lbox" id="cLoad">
+      <div class="ring p"></div>
+      <div class="rtxt p">АНАЛИЗ</div>
+    </div>
+    <!-- normal result -->
+    <div class="rcard" id="cRes" style="--ac:#9b59ff">
+      <div class="badge p">✈️ ВЫХОДИ ЗДЕСЬ</div>
+      <div>
+        <div class="bnum p" id="cNum">—</div>
+        <div class="bsub">НАЖМИ ВЫВОД ДО ЭТОГО МНОЖИТЕЛЯ</div>
+      </div>
+      <div style="width:100%">
+        <div class="cbar">
+          <div class="cbar-fill" id="cFill" style="width:60%"></div>
+          <div class="cbar-danger" id="cDanger" style="width:15%"></div>
+        </div>
+        <div class="cbar-labels">
+          <span class="cbl-safe" id="cSafe">Выход: —</span>
+          <span class="cbl-crash" id="cCrash">Краш: —</span>
+        </div>
+      </div>
+      <div class="dhint" id="cHint">Забери выигрыш <b>до краша</b> — не жадничай!</div>
+      <div class="stats">
+        <div class="stat"><div class="sval p" id="cExit">—</div><div class="slbl">Выйти на</div></div>
+        <div class="stat"><div class="sval y" id="cChance">—</div><div class="slbl">Шанс успеха</div></div>
+        <div class="stat"><div class="sval g" id="cProfit">—</div><div class="slbl">Профит х1</div></div>
+      </div>
+    </div>
+    <!-- skip card -->
+    <div class="skip-card" id="cSkip">
+      <div class="skip-icon">⚠️</div>
+      <div class="skip-title">ПРОПУСТИ СТАВКУ</div>
+      <div class="skip-box">
+        <div style="color:#5c7a9a;font-size:12px;font-weight:600;margin-bottom:6px;">АНАЛИЗ ПОКАЗЫВАЕТ</div>
+        <div style="color:#ffd740;font-size:14px;font-weight:700;line-height:1.5;">Высокий риск раннего краша<br>в этом раунде</div>
+      </div>
+      <div class="skip-hint">Подожди следующий раунд — <b>не рискуй</b></div>
+    </div>
+    <div style="height:14px"></div>
+    <button class="btn btn-purple" id="cBtn" onclick="doLJ()">Узнать результат</button>
+  </div>
+</div>
+
+<!-- ===== PROFILE SCREEN ===== -->
+<div class="scr" id="sP">
+  <div class="prof-hero">
+    <div class="pava">👤</div>
+    <div>
+      <div class="pname">Мой профиль</div>
+      <div class="psub">Stake Mines Analysis</div>
+    </div>
+    <div class="ptag">АКТИВЕН</div>
+  </div>
+
+  <!-- STAKE -->
+  <div class="acard stake" onclick="openStake()">
+    <div class="acin">
+      <div class="atop">
+        <div class="aicon g">
+          <svg width="26" height="26" viewBox="0 0 40 40">
+            <polygon points="20,4 10,16 20,13 30,16" fill="#ccffd8" opacity=".9"/>
+            <polygon points="10,16 20,36 30,16 20,13" fill="#fff"/>
+            <polygon points="4,16 10,16 20,36" fill="#b2ffd0"/>
+            <polygon points="36,16 30,16 20,36" fill="#ccffe0"/>
+            <polygon points="16,5 12,14 20,13" fill="white" opacity=".5"/>
+          </svg>
+        </div>
+        <div class="abadge g">⚡ STAKE CASINO</div>
+      </div>
+      <div class="atitle">Регистрация на <span class="g">Stake</span></div>
+      <div class="adesc">Доступ к Mines и Dice анализатору. Только для новых игроков.</div>
+      <div class="adiv"></div>
+      <div class="asteps">
+        <div class="astep"><div class="astepn b">1</div><div class="astept">Перейди по ссылке на Stake</div></div>
+        <div class="astep"><div class="astepn b">2</div><div class="astept">Зарегистрируйся и получи бонус <strong>+100% к депозиту</strong></div></div>
+        <div class="astep"><div class="astepn b">3</div><div class="astept">Получи полный доступ к анализатору</div></div>
+      </div>
+      <button class="abtn g" onclick="openStake(event)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        Зарегистрироваться на Stake
+      </button>
+      <div class="anote">stake3071.com · Mines & Dice</div>
+    </div>
+  </div>
+
+  <!-- 1WIN -->
+  <div class="acard onewin" onclick="open1win()">
+    <div class="acin">
+      <div class="atop">
+        <div class="aicon p" style="font-size:24px">✈️</div>
+        <div class="abadge p">🔥 1WIN CASINO</div>
+      </div>
+      <div class="atitle">Регистрация на <span class="p">1Win</span></div>
+      <div class="adesc">Доступ к Lucky Jet анализатору. Только для новых игроков.</div>
+      <div class="adiv"></div>
+      <div class="asteps">
+        <div class="astep"><div class="astepn p">1</div><div class="astept">Перейди по ссылке на 1Win</div></div>
+        <div class="astep"><div class="astepn p">2</div><div class="astept">Зарегистрируйся как новый игрок</div></div>
+        <div class="astep"><div class="astepn p">3</div><div class="astept">Введи промокод и получи бонус <strong>+500% к депозиту</strong></div></div>
+      </div>
+      <div class="promo">
+        <div>
+          <div class="promo-l">Промокод при регистрации</div>
+          <div class="promo-code">Dice7777</div>
+        </div>
+        <div class="promo-tag">+500% к депозиту</div>
+      </div>
+      <button class="abtn p" onclick="open1win(event)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        Зарегистрироваться на 1Win
+      </button>
+      <div class="anote">one-vv7733.life · Lucky Jet</div>
+    </div>
+  </div>
+
+  <div class="strow">
+    <div class="stcard"><div class="sticon g">🎯</div><div><div class="stbig">98.6%</div><div class="stlbl">Точность</div></div></div>
+    <div class="stcard"><div class="sticon b">🎮</div><div><div class="stbig" style="color:#448aff">3 игры</div><div class="stlbl">Режимов</div></div></div>
+  </div>
+  <div class="icard">
+    <div class="iicon">📊</div>
+    <div><div class="ititle">Анализ раскладов</div><div class="isub">Mines 5×5 · Dice · Lucky Jet 1Win</div></div>
+  </div>
+  <div class="foot">Только достоверный результат</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <button class="nitem on" id="nG" onclick="tab('G')">
+    <svg class="nicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>РЕЗУЛЬТАТ
+  </button>
+  <button class="nitem" id="nP" onclick="tab('P')">
+    <svg class="nicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>ПРОФИЛЬ
+  </button>
+</nav>
+</div>
+
+<script>
+if(window.Telegram&&window.Telegram.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}
+
+const STAKE='https://stake3071.com/?c=StakeRUSSIA77';
+const ONEWIN='https://one-vv7733.life/casino?p=8ryd';
+
+function link(u){if(window.Telegram&&window.Telegram.WebApp)Telegram.WebApp.openLink(u);else window.open(u,'_blank');}
+function openStake(e){if(e)e.stopPropagation();link(STAKE);}
+function open1win(e){if(e)e.stopPropagation();link(ONEWIN);}
+
+function tab(t){
+  ['G','P'].forEach(x=>{
+    document.getElementById('s'+x).classList.remove('on');
+    document.getElementById('n'+x).classList.remove('on');
+  });
+  document.getElementById('s'+t).classList.add('on');
+  document.getElementById('n'+t).classList.add('on');
+}
+
+/* ── MODE ── */
+let cm='m';
+function sw(m){
+  cm=m;
+  document.getElementById('bM').className='mbtn'+(m==='m'?' sel-green':'');
+  document.getElementById('bD').className='mbtn'+(m==='d'?' sel-blue':'');
+  document.getElementById('bC').className='mbtn'+(m==='c'?' sel-purple':'');
+  document.getElementById('pM').style.display=m==='m'?'block':'none';
+  document.getElementById('pD').style.display=m==='d'?'block':'none';
+  document.getElementById('pC').style.display=m==='c'?'block':'none';
+  const bl={m:'5×5 GRID',d:'DICE 0–100',c:'LUCKY JET'};
+  document.getElementById('topBadge').textContent=bl[m];
+}
+
+/* ── MINES ── */
+let mC=3,mPh='idle';
+function setM(v){mC=Math.min(24,Math.max(1,v));document.getElementById('mNum').textContent=mC;document.getElementById('mSl').value=mC;updSl();}
+function adjM(d){if(mPh==='idle')setM(mC+d);}
+function onSl(v){if(mPh==='idle')setM(+v);}
+function updSl(){const p=((mC-1)/23)*100;document.getElementById('mSl').style.background='linear-gradient(to right,#00e676 0%,#00e676 '+p+'%,#1a2f42 '+p+'%,#1a2f42 100%)';}
+function cMlt(k,m){let r=0.99;for(let i=0;i<k;i++)r*=(25-i)/(25-m-i);return r;}
+function revN(m){const s=25-m;let a=[];for(let k=1;k<=s;k++){const r=cMlt(k,m);if(r>=1.4&&r<=4.9)a.push(k);}if(!a.length)return 1;return a[Math.floor(a.length*(0.3+Math.random()*0.4))];}
+function dSVG(s){return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 40 40"><defs><filter id="gf"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g filter="url(#gf)"><polygon points="20,4 10,16 20,13 30,16" fill="#69f0ae" opacity=".9"/><polygon points="10,16 20,36 30,16 20,13" fill="#00e676"/><polygon points="4,16 10,16 20,36" fill="#00b248"/><polygon points="36,16 30,16 20,36" fill="#00c853"/><polygon points="4,16 20,4 10,16" fill="#69f0ae" opacity=".7"/><polygon points="36,16 20,4 30,16" fill="#69f0ae" opacity=".5"/><polygon points="16,5 12,14 20,13" fill="white" opacity=".4"/></g></svg>';}
+function buildG(){const g=document.getElementById('grid');g.innerHTML='';for(let i=0;i<25;i++){const t=document.createElement('div');t.className='tile';t.id='t'+i;g.appendChild(t);}document.getElementById('gTip').classList.remove('on');}
+function doMines(){
+  if(mPh==='result'){mPh='idle';buildG();document.getElementById('mBtn').textContent='Узнать результат';document.getElementById('mSl').disabled=false;return;}
+  if(mPh==='analyzing')return;
+  mPh='analyzing';
+  const btn=document.getElementById('mBtn');btn.disabled=true;btn.textContent='Анализируем...';
+  document.getElementById('mSl').disabled=true;
+  document.getElementById('gOv').classList.add('on');
+  setTimeout(function(){
+    const p=[...Array(25).keys()];
+    for(let i=24;i>0;i--){const j=Math.floor(Math.random()*(i+1));const tmp=p[i];p[i]=p[j];p[j]=tmp;}
+    const safe=p.slice(mC);const rv=revN(mC);const show=safe.slice(0,rv);
+    document.getElementById('gOv').classList.remove('on');
+    document.getElementById('gTip').classList.add('on');
+    show.forEach(function(idx,i){setTimeout(function(){const t=document.getElementById('t'+idx);if(!t)return;t.classList.add('safe');t.innerHTML=dSVG(28);},i*90);});
+    setTimeout(function(){mPh='result';btn.disabled=false;btn.textContent='🔄 Новый анализ';},show.length*90+150);
+  },900);
+}
+
+/* ── DICE ── */
+let ouM='o',dPh='idle';
+function setOU(m){
+  ouM=m;
+  document.getElementById('bOv').className='oubtn'+(m==='o'?' sel-over':'');
+  document.getElementById('bUn').className='oubtn'+(m==='u'?' sel-under':'');
+  if(dPh==='result'){dPh='idle';document.getElementById('dRes').classList.remove('on');document.getElementById('dBtn').textContent='Узнать результат';}
+}
+function doDice(){
+  if(dPh==='result'){dPh='idle';document.getElementById('dRes').classList.remove('on');document.getElementById('dBtn').textContent='Узнать результат';return;}
+  if(dPh==='analyzing')return;
+  dPh='analyzing';
+  const btn=document.getElementById('dBtn');btn.disabled=true;btn.textContent='Анализируем...';
+  document.getElementById('dRes').classList.remove('on');
+  document.getElementById('dLoad').classList.add('on');
+  setTimeout(function(){
+    document.getElementById('dLoad').classList.remove('on');
+    const io=ouM==='o';
+    let num,mult,chance;
+    if(io){num=+(33+Math.random()*30).toFixed(2);mult=+(99/(100-num)).toFixed(2);chance=+((100-num)*0.99).toFixed(1);}
+    else{num=+(37+Math.random()*28).toFixed(2);mult=+(99/num).toFixed(2);chance=+(num*0.99).toFixed(1);}
+    const cl=io?'g':'b';
+    document.getElementById('dRes').style.setProperty('--ac',io?'#00e676':'#448aff');
+    document.getElementById('dBdg').textContent=io?'СТАВЬ БОЛЬШЕ':'СТАВЬ МЕНЬШЕ';
+    document.getElementById('dBdg').className='badge '+cl;
+    document.getElementById('dNum').textContent=num.toFixed(2);
+    document.getElementById('dNum').className='bnum '+cl;
+    document.getElementById('dHint').innerHTML='Выбери <b>'+(io?'БОЛЬШЕ':'МЕНЬШЕ')+'</b>, введи <b>'+num.toFixed(2)+'</b> и ставь';
+    document.getElementById('dMult').textContent=mult+'×';
+    document.getElementById('dMult').className='sval '+cl;
+    document.getElementById('dNumS').textContent=num.toFixed(2);
+    document.getElementById('dChan').textContent=chance+'%';
+    const fl=document.getElementById('dFill'),dt=document.getElementById('dDot');
+    fl.className='dfill '+cl;
+    if(io){fl.style.cssText='width:'+(100-num).toFixed(1)+'%;right:0;left:auto';}
+    else{fl.style.cssText='width:'+num.toFixed(1)+'%;left:0;right:auto';}
+    dt.style.left=num.toFixed(1)+'%';
+    document.getElementById('dRes').classList.add('on');
+    dPh='result';btn.disabled=false;btn.textContent='🔄 Новый анализ';
+  },900);
+}
+
+/* ── LUCKY JET ── */
+let cPh='idle';
+let ljSkip=Math.floor(Math.random()*5)+4;
+let ljCount=0;
+
+function getLJMult(){
+  const r=Math.random();
+  if(r<0.52)return+(1.40+Math.random()*0.20).toFixed(2);
+  if(r<0.80)return+(1.61+Math.random()*0.89).toFixed(2);
+  return+(2.51+Math.random()*1.49).toFixed(2);
+}
+
+function doLJ(){
+  if(cPh==='result'){
+    cPh='idle';
+    document.getElementById('cRes').classList.remove('on');
+    document.getElementById('cSkip').classList.remove('on');
+    document.getElementById('cBtn').textContent='Узнать результат';
+    return;
+  }
+  if(cPh==='analyzing')return;
+  cPh='analyzing';
+  const btn=document.getElementById('cBtn');btn.disabled=true;btn.textContent='Анализируем...';
+  document.getElementById('cRes').classList.remove('on');
+  document.getElementById('cSkip').classList.remove('on');
+  document.getElementById('cLoad').classList.add('on');
+  setTimeout(function(){
+    document.getElementById('cLoad').classList.remove('on');
+    ljCount++;
+    if(ljCount>=ljSkip){
+      ljCount=0;ljSkip=Math.floor(Math.random()*5)+4;
+      document.getElementById('cSkip').classList.add('on');
+      cPh='result';btn.disabled=false;btn.textContent='🔄 Следующий раунд';
+      return;
+    }
+    const ex=getLJMult();
+    const cr=+(ex+0.25+Math.random()*1.6).toFixed(2);
+    const ch=Math.max(52,Math.round(95-ex*9));
+    const pr=(ex-1).toFixed(2);
+    const mx=Math.max(cr,5);
+    const ep=Math.min(90,(ex/mx)*100);
+    const dp=100-Math.min(97,(cr/mx)*100);
+    document.getElementById('cNum').textContent=ex.toFixed(2)+'×';
+    document.getElementById('cHint').innerHTML='Выведи на <b>'+ex.toFixed(2)+'×</b> — не жди краша на <b style="color:#ef5350">'+cr.toFixed(2)+'×</b>';
+    document.getElementById('cExit').textContent=ex.toFixed(2)+'×';
+    document.getElementById('cChance').textContent=ch+'%';
+    document.getElementById('cProfit').textContent='+'+pr+'×';
+    document.getElementById('cFill').style.width=ep.toFixed(1)+'%';
+    document.getElementById('cDanger').style.width=dp.toFixed(1)+'%';
+    document.getElementById('cSafe').textContent='Выход: '+ex.toFixed(2)+'×';
+    document.getElementById('cCrash').textContent='Краш: '+cr.toFixed(2)+'×';
+    document.getElementById('cRes').classList.add('on');
+    cPh='result';btn.disabled=false;btn.textContent='🔄 Новый анализ';
+  },900);
+}
+
+buildG();updSl();
+</script>
+</body>
+</html>
